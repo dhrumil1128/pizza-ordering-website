@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Ordering System</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    <style>
+        /* Custom CSS Overrides (style.css content) */
+        body {
+            background-color: #f8f9fa;
+        }
+        .pizza-card-img {
+            height: 150px;
+            object-fit: cover;
+            background-color: #e9ecef;
+        }
+        #cart-sidebar {
+            top: 20px; /* Adjusting for fixed navbar */
+        }
+        .cart-item-row {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .status-alert {
+            position: sticky;
+            top: 70px; /* Below navbar */
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header (Navigation Bar) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid container-lg">
+            <a class="navbar-brand" href="#">&#127829; Supreme Pizza Order</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-light text-primary" data-bs-toggle="modal" data-bs-target="#checkoutModal" id="openCartButton" disabled>
+                            View Cart (<span id="cartCount">0</span>)
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Status/Alert Area -->
+    <div class="container-lg my-3">
+        <div id="statusAlertContainer" class="status-alert d-none">
+            <!-- Alerts will be injected here -->
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="container-lg mt-4">
+        <div class="row">
+            
+            <!-- Menu Section (col-md-8) -->
+            <div class="col-lg-8 mb-4">
+                <h2 class="mb-3 text-secondary">Our Menu</h2>
+                
+                <!-- Loading Indicator -->
+                <div id="menuLoading" class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading menu items...</p>
+                </div>
+
+                <!-- Menu Container -->
+                <div id="menuContainer" class="row">
+                    <!-- Pizza Cards injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Order Cart Sidebar (col-md-4) -->
+            <div class="col-lg-4">
+                <div id="cart-sidebar" class="p-3 bg-white rounded shadow sticky-top">
+                    <h4 class="border-bottom pb-2 mb-3">Your Order Summary</h4>
+                    
+                    <div id="cartItemsList">
+                        <!-- Cart items injected here -->
+                        <p class="text-muted text-center" id="emptyCartMessage">Your cart is empty.</p>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between fs-5 fw-bold">
+                            <span>Total:</span>
+                            <span id="cartTotal">$0.00</span>
+                        </div>
+                        
+                        <button class="btn btn-success w-100 mt-3" id="checkoutButton" data-bs-toggle="modal" data-bs-target="#checkoutModal" disabled>
+                            Proceed to Checkout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="checkoutModalLabel">Finalize Your Order</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="orderForm">
+                    <div class="modal-body">
+                        
+                        <!-- Customer Info Form -->
+                        <h5 class="mb-3">Customer Information</h5>
+                        <div class="mb-3">
+                            <label for="customerName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="customerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customerAddress" class="form-label">Delivery Address</label>
+                            <textarea class="form-control" id="customerAddress" rows="2" required></textarea>
+                        </div>
+
+                        <!-- Order Review -->
+                        <h5 class="mt-4 mb-3 border-top pt-3">Order Review</h5>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th class="text-end">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalCartReview">
+                                <!-- Review items injected here -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <td colspan="2">Grand Total</td>
+                                    <td class="text-end" id="modalGrandTotal">$0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" id="placeOrderBtn">
+                            Place Order Now
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NN5SrVx4M9aDA+W8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous"></script>
+
+    <script>
+        // ==============================================================
+        // app.js CONTENT START (MODIFIED FOR API BASE URL)
+        // ==============================================================
+
+        // --- CONFIGURATION ---
+        // Set API base URL pointing to the FastAPI backend server
+        const API_BASE = 'http://127.0.0.1:8000/api/v1'; 
+
+        // --- STATE MANAGEMENT ---
+        let menuData = [];
+        let cart = []; // Structure: [{ pizzaId: number, name: string, price: number, quantity: number }]
+        let total = 0;
+
+        // --- MOCK API DATA & SIMULATION (Simplified for FE testing, actual calls use API_BASE) ---
+        // Note: The actual backend handles the real data via API calls.
+        const MOCK_MENU = [
+            { id: 1, name: "Margherita", description: "Classic tomato and cheese on a thin crust.", price: 12.50 },
+            { id: 2, name: "Pepperoni Feast", description: "Loaded with premium spicy pepperoni.", price: 15.00 },
+            { id: 3, name: "Veggie Supreme", description: "Mushrooms, onions, peppers, olives.", price: 14.00 },
+            { id: 4, name: "Hawaiian Delight", description: "Ham and pineapple (controversial but delicious).", price: 13.50 }
+        ];
+
+        /**
+         * Simulates fetching the menu from /api/v1/pizzas
+         * @returns {Promise<Array>}
+         */
+        async function fetchMenu() {
+            try {
+                const response = await fetch(`${API_BASE}/pizzas`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Error fetching menu, falling back to mock data:", error);
+                // Fallback to mock data if API call fails (e.g., backend not running locally)
+                await new Promise(resolve => setTimeout(resolve, 1000)); 
+                return MOCK_MENU;
+            }
+        }
+
+        /**
+         * Simulates placing an order to /api/v1/orders
+         * @param {object} orderPayload
+         * @returns {Promise<object>}
+         */
+        async function placeOrder(orderPayload) {
+            const response = await fetch(`${API_BASE}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderPayload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw errorData; // FastAPI returns error details in JSON body
+            }
+            
+            return await response.json();
+        }
+
+        // --- UTILITY FUNCTIONS ---
+
+        function formatCurrency(amount) {
+            return `$${amount.toFixed(2)}`;
+        }
+
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('statusAlertContainer');
+            const alertClass = type === 'success' ? 'alert-success' : 
+                               type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            container.innerHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            container.classList.remove('d-none');
+
+            // Auto-hide info/error messages after 7 seconds (as per plan)
+            if (type !== 'success') {
+                setTimeout(() => {
+                    container.classList.add('d-none');
+                    container.innerHTML = '';
+                }, 7000);
+            }
+        }
+
+        // --- CART & UI RENDERING ---
+
+        function updateCartState() {
+            total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            document.getElementById('cartTotal').textContent = formatCurrency(total);
+            document.getElementById('cartCount').textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            const checkoutBtn = document.getElementById('checkoutButton');
+            checkoutBtn.disabled = cart.length === 0;
+        }
+
+        function renderCart() {
+            const cartList = document.getElementById('cartItemsList');
+            const emptyMsg = document.getElementById('emptyCartMessage');
+            cartList.innerHTML = '';
+
+            if (cart.length === 0) {
+                emptyMsg.classList.remove('d-none');
+                return;
+            }
+            emptyMsg.classList.add('d-none');
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center py-2 cart-item-row';
+                row.innerHTML = `
+                    <div>
+                        <div class="fw-bold">${item.name}</div>
+                        <small class="text-muted">Qty: ${item.quantity} @ ${formatCurrency(item.price)}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">${formatCurrency(itemTotal)}</div>
+                        <button class="btn btn-sm btn-outline-danger remove-item" data-id="${item.pizzaId}">X</button>
+                    </div>
+                `;
+                cartList.appendChild(row);
+            });
+            
+            attachCartListeners();
+            updateCartState();
+        }
+        
+        function renderMenu() {
+            const menuContainer = document.getElementById('menuContainer');
+            menuContainer.innerHTML = '';
+            
+            menuData.forEach(pizza => {
+                const card = document.createElement('div');
+                card.className = 'col-md-6';
+                card.innerHTML = `
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">${pizza.name}</h5>
+                            <p class="card-text text-muted">${pizza.description}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="fs-4 fw-bold">${formatCurrency(pizza.price)}</span>
+                                <button class="btn btn-success btn-sm add-to-cart" data-id="${pizza.id}">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                menuContainer.appendChild(card);
+            });
+            
+            attachMenuListeners();
+        }
+
+        function renderModalReview() {
+            const modalBody = document.getElementById('modalCartReview');
+            const modalTotal = document.getElementById('modalGrandTotal');
+            modalBody.innerHTML = '';
+
+            if (cart.length === 0) {
+                modalBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Cart is empty.</td></tr>';
+                modalTotal.textContent = formatCurrency(0);
+                return;
+            }
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td class="text-end">${formatCurrency(itemTotal)}</td>
+                `;
+                modalBody.appendChild(row);
+            });
+            
+            modalTotal.textContent = formatCurrency(total);
+        }
+
+        // --- EVENT HANDLERS ---
+
+        function attachMenuListeners() {
+            document.querySelectorAll('.add-to-cart').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const pizzaId = parseInt(e.target.dataset.id);
+                    handleAddToCart(pizzaId);
+                });
+            });
+        }
+        
+        function attachCartListeners() {
+            document.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const pizzaId = parseInt(e.target.dataset.id);
+                    handleRemoveFromCart(pizzaId);
+                });
+            });
+        }
+
+        function handleAddToCart(pizzaId) {
+            const pizza = menuData.find(p => p.id === pizzaId);
+            if (!pizza) return;
+
+            const existingItemIndex = cart.findIndex(item => item.pizzaId === pizzaId);
+
+            if (existingItemIndex > -1) {
+                cart[existingItemIndex].quantity += 1;
+            } else {
+                cart.push({
+                    pizzaId: pizza.id,
+                    name: pizza.name,
+                    price: pizza.price,
+                    quantity: 1
+                });
+            }
+            
+            renderCart();
+            showAlert(`${pizza.name} added to cart.`, 'info');
+        }
+        
+        function handleRemoveFromCart(pizzaId) {
+            const index = cart.findIndex(item => item.pizzaId === pizzaId);
+            if (index === -1) return;
+            
+            const removedItemName = cart[index].name;
+            
+            if (cart[index].quantity > 1) {
+                cart[index].quantity -= 1;
+                showAlert(`Removed one unit of ${removedItemName}.`, 'info');
+            } else {
+                cart.splice(index, 1);
+                showAlert(`${removedItemName} removed completely from cart.`, 'info');
+            }
+            
+            renderCart();
+        }
+
+        // --- CHECKOUT LOGIC ---
+        
+        const orderForm = document.getElementById('orderForm');
+        const checkoutModalEl = document.getElementById('checkoutModal');
+        let checkoutModal;
+
+        function setupCheckoutModal() {
+            checkoutModal = new bootstrap.Modal(checkoutModalEl);
+            
+            // Show event listener to refresh modal content
+            checkoutModalEl.addEventListener('show.bs.modal', () => {
+                renderModalReview();
+                // Enable checkout button if cart is not empty
+                document.getElementById('placeOrderBtn').disabled = cart.length === 0;
+            });
+            
+            // Hide event listener to clean up UI
+            checkoutModalEl.addEventListener('hidden.bs.modal', () => {
+                orderForm.reset();
+                document.getElementById('placeOrderBtn').textContent = 'Place Order Now';
+                document.getElementById('placeOrderBtn').disabled = false;
+            });
+            
+            orderForm.addEventListener('submit', handleOrderSubmission);
+        }
+        
+        async function handleOrderSubmission(e) {
+            e.preventDefault();
+            
+            const placeOrderBtn = document.getElementById('placeOrderBtn');
+            
+            if (cart.length === 0) {
+                showAlert("Cannot place an empty order.", 'error');
+                return;
+            }
+            
+            // 1. Set Loading State
+            placeOrderBtn.disabled = true;
+            placeOrderBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+
+            const customerName = document.getElementById('customerName').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+
+            const orderPayload = {
+                customer_info: {
+                    name: customerName,
+                    address: customerAddress
+                },
+                items: cart.map(item => ({
+                    pizza_id: item.pizzaId,
+                    quantity: item.quantity
+                }))
+            };
+
+            try {
+                // 2. Call API
+                const response = await placeOrder(orderPayload);
+                
+                // 3. Success
+                showAlert(`Order placed successfully! Your Order ID is: ${response.order_id}`, 'success');
+                
+                // Clear cart and update UI
+                cart.length = 0;
+                renderCart();
+                
+                // Close modal
+                checkoutModal.hide();
+
+            } catch (error) {
+                // 4. Error Handling
+                const errorMessage = error.detail || error.message || "An unknown error occurred during checkout.";
+                showAlert(`Order Failed: ${errorMessage}`, 'error');
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.textContent = 'Try Again'; // Change button text on failure
+                
+            } finally {
+                // Ensure button is re-enabled if submission failed, or if success (modal closes)
+                if (!checkoutModal._isShown) {
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.textContent = 'Place Order Now';
+                }
+            }
+        }
+
+
+        // --- INITIALIZATION ---
+
+        async function initializeApp() {
+            // 1. Setup Modal Listeners
+            setupCheckoutModal();
+            
+            // 2. Fetch Menu Data
+            try {
+                const data = await fetchMenu();
+                menuData = data;
+                
+                // Hide loading, render menu
+                document.getElementById('menuLoading').classList.add('d-none');
+                renderMenu();
+                
+                // Enable cart button now that menu items exist
+                document.getElementById('openCartButton').disabled = false;
+                document.getElementById('checkoutButton').disabled = true;
+
+            } catch (error) {
+                // Handle initial load error
+                document.getElementById('menuLoading').innerHTML = `
+                    <div class="alert alert-danger p-4">
+                        <h5>Error Loading Menu</h5>
+                        <p>${error.message || 'Could not fetch menu data from the server.'}</p>
+                        <p>Please refresh the page or check the backend service status.</p>
+                    </div>
+                `;
+                showAlert("Failed to load menu data.", 'error');
+            }
+            
+            // Initial render of empty cart
+            renderCart();
+        }
+
+        // Run initialization when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // ==============================================================
+        // app.js CONTENT END
+        // ==============================================================
+    </script>
+
+</body>
+</html>
